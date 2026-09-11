@@ -34,7 +34,7 @@ Detect Overtemperature Fault
     Log    Initial faults: ${initial_faults}
 
     # Inject overtemperature
-    Inject Cell Overtemperature    cell_id=0    temperature=${MAX_OPERATING_TEMP + 10}
+    Inject Cell Overtemperature    cell_id=0    temperature=${{ ${MAX_CELL_TEMP} + 10 }}
 
     ${detected}=    Verify Battery Fault Detected    fault_name=OVERTEMPERATURE    timeout=2
 
@@ -49,7 +49,7 @@ Detect Undertemperature Fault
     [Tags]    battery    thermal    fault
 
     # Inject undertemperature
-    Inject Cell Undertemperature    cell_id=0    temperature=${MIN_OPERATING_TEMP - 10}
+    Inject Cell Undertemperature    cell_id=0    temperature=${{ ${MIN_CELL_TEMP} - 10 }}
 
     ${detected}=    Verify Battery Fault Detected    fault_name=UNDERTEMPERATURE    timeout=2
 
@@ -64,7 +64,7 @@ Verify Temperature Limits
     [Tags]    battery    thermal    limits
 
     # Test upper limit
-    Inject Cell Overtemperature    cell_id=1    temperature=${MAX_CELL_TEMP + 5}
+    Inject Cell Overtemperature    cell_id=1    temperature=${{ ${MAX_CELL_TEMP} + 5 }}
 
     ${faults}=    Get Battery Faults
     Should Contain    ${faults}    OVERTEMPERATURE
@@ -72,7 +72,7 @@ Verify Temperature Limits
     Clear Battery Faults
 
     # Test lower limit
-    Inject Cell Undertemperature    cell_id=1    temperature=${MIN_CELL_TEMP - 5}
+    Inject Cell Undertemperature    cell_id=1    temperature=${{ ${MIN_CELL_TEMP} - 5 }}
 
     ${faults}=    Get Battery Faults
     Should Contain    ${faults}    UNDERTEMPERATURE
@@ -96,6 +96,7 @@ Temperature D Spread Detection
 
     # In a real implementation, this would trigger a spread fault
     Should Be True    ${spread} > 30    msg=Temperature spread not as expected
+    [Teardown]    Clear Battery Faults
 
 
 Thermal Fault During Charging
@@ -138,7 +139,7 @@ Multiple Thermal Faults Detection
     FOR    ${cell_id}    IN RANGE    ${NUM_CELLS}
         ${temp}=    Get Cell Temperature    ${cell_id}
         ${is_over}=    Evaluate    ${temp} > ${MAX_CELL_TEMP}
-        ${overtemp_count}=    Set Variable If    ${is_over}    ${overtemp_count + 1}    ${overtemp_count}
+        ${overtemp_count}=    Set Variable If    ${is_over}    ${{ ${overtemp_count} + 1 }}    ${overtemp_count}
     END
 
     Log    Cells over temperature: ${overtemp_count}
@@ -191,7 +192,7 @@ Temperature Monitoring Precision
 Start Battery Simulation
     [Documentation]    Initialize battery ECU simulation and fault injection
     Log    Starting battery ECU simulation for thermal tests...
-    ${id}=    Start Battery Simulation    num_cells=${NUM_CELLS}
+    ${id}=    libraries.ECUSimulatorLibrary.Start Battery Simulation    num_cells=${NUM_CELLS}
 
     # Get ECU instance for fault injection
     ${battery_ecu}=    Get Battery ECU Instance
@@ -201,27 +202,6 @@ Start Battery Simulation
 
 Clear All Faults And Stop
     [Documentation]    Clear faults and stop simulation
-    Clear All Faults
+    Clear Battery Faults
     Stop All Simulations
     Log    Battery simulation stopped and faults cleared
-
-Get Battery Faults
-    [Documentation]    Helper to get current battery faults
-    [Arguments]    ${timeout}=0.5
-    # This would need to be implemented in ECUSimulatorLibrary
-    # For now, return empty list
-    @{empty}=    Create List
-    Return    ${empty}
-
-Get Battery ECU Instance
-    [Documentation]    Get the battery ECU instance for fault injection
-    # In real implementation, this would return the actual ECU instance
-    # For simulation, return mock object
-    ${battery}=    Evaluate    None
-    Return    ${battery}
-
-Set Cell Temperature
-    [Documentation]    Set a specific cell temperature (for fault injection)
-    [Arguments]    ${cell_id}    ${temperature}
-    # This would be implemented using FaultInjectionLibrary
-    Log    Setting cell ${cell_id} temperature to ${temperature}C
