@@ -157,6 +157,66 @@ class ECUSimulatorLibrary:
         return self._battery_ecu.get_cell_voltage(cell_id)
 
     @keyword
+    def set_cell_voltage(self, cell_id: int, voltage: float):
+        """
+        Set voltage of a specific battery cell (fault injection)
+
+        Example:
+            | Set Cell Voltage | cell_id=0 | voltage=4.3 |
+        """
+        if self._battery_ecu is None:
+            raise RuntimeError("Battery ECU not started")
+        self._battery_ecu.set_cell_voltage(int(cell_id), float(voltage))
+
+    @keyword
+    def set_cell_temperature(self, cell_id: int, temperature: float):
+        """
+        Set temperature of a specific battery cell (fault injection)
+
+        Example:
+            | Set Cell Temperature | cell_id=0 | temperature=70 |
+        """
+        if self._battery_ecu is None:
+            raise RuntimeError("Battery ECU not started")
+        self._battery_ecu.set_cell_temperature(int(cell_id), float(temperature))
+
+    @keyword
+    def get_cell_temperature(self, cell_id: int) -> float:
+        """
+        Get temperature of a specific battery cell
+
+        Example:
+            | ${temp}= | Get Cell Temperature | cell_id=0 |
+        """
+        if self._battery_ecu is None:
+            raise RuntimeError("Battery ECU not started")
+        return float(self._battery_ecu.get_cell_temperature(int(cell_id)))
+
+    @keyword
+    def get_battery_faults(self) -> list[str]:
+        """
+        Get list of active battery fault codes
+
+        Example:
+            | ${faults}= | Get Battery Faults |
+        """
+        if self._battery_ecu is None:
+            raise RuntimeError("Battery ECU not started")
+        return list(self._battery_ecu.check_faults())
+
+    @keyword
+    def get_battery_ecu_instance(self):
+        """
+        Return the running BatteryECU instance (for FaultInjectionLibrary)
+
+        Example:
+            | ${ecu}= | Get Battery ECU Instance |
+        """
+        if self._battery_ecu is None:
+            raise RuntimeError("Battery ECU not started")
+        return self._battery_ecu
+
+    @keyword
     def simulate_charging(self, current: float, duration: float):
         """
         Simulate battery charging or discharging
