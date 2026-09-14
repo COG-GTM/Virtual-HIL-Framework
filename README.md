@@ -212,6 +212,10 @@ Test Overvoltage Detection
     Should Be True    ${detected}
 
     Clear All Faults
+
+    Inject CAN Bus Timeout
+    ${detected}=    Verify Battery Fault Detected    CAN_TIMEOUT
+    Should Be True    ${detected}
 ```
 
 ## CAN Message Definitions
