@@ -120,6 +120,19 @@ class ECUSimulatorHTTPLibrary:
         )
         return self._handle_response(response, error_message)
 
+    def _delete(self, path: str, data: Optional[dict] = None, error_message: str = "") -> dict:
+        """Perform DELETE request"""
+        url = self._url(path)
+        logger.debug(f"DELETE {url} data={data}")
+        response = self.session.delete(
+            url,
+            json=data,
+            headers={"Content-Type": "application/json"},
+            timeout=self.timeout,
+            verify=self.verify,
+        )
+        return self._handle_response(response, error_message)
+
     def _put(self, path: str, data: Optional[dict] = None, error_message: str = "") -> dict:
         """Perform PUT request"""
         url = self._url(path)
@@ -434,6 +447,38 @@ class ECUSimulatorHTTPLibrary:
         result = self._post("/ecu/dtc/clear", "Failed to clear DTC")
         logger.info("DTCs cleared")
         return result.get("message", "DTCs cleared")
+
+    @keyword
+    def inject_can_bus_timeout(self) -> str:
+        """
+        Inject a CAN bus timeout fault
+
+        Returns:
+            Confirmation message
+
+        Example:
+            | Inject CAN Bus Timeout |
+        """
+        result = self._post("/ecu/fault/can_timeout", "Failed to inject CAN bus timeout")
+        logger.info("CAN bus timeout injected")
+        return result.get("message", "CAN bus timeout injected")
+
+    @keyword
+    def clear_can_bus_timeout(self) -> str:
+        """
+        Clear a CAN bus timeout fault
+
+        Returns:
+            Confirmation message
+
+        Example:
+            | Clear CAN Bus Timeout |
+        """
+        result = self._delete(
+            "/ecu/fault/can_timeout", error_message="Failed to clear CAN bus timeout"
+        )
+        logger.info("CAN bus timeout cleared")
+        return result.get("message", "CAN bus timeout cleared")
 
     @keyword
     def ecu_should_have_fault(self, fault_code: str):

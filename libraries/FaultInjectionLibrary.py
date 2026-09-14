@@ -209,6 +209,38 @@ class FaultInjectionLibrary:
         # Note: In real implementation, this would affect the CAN interface
 
     @keyword
+    def inject_can_bus_timeout(self):
+        """
+        Inject CAN bus timeout fault on the battery ECU
+
+        Example:
+            | Inject CAN Bus Timeout |
+        """
+        if self._battery_ecu is None:
+            raise RuntimeError("Battery ECU not set")
+
+        self._battery_ecu.inject_can_timeout()
+        self._injected_faults.append(("can_bus_timeout", None))
+        logger.warning("Injected CAN bus timeout fault")
+
+    @keyword
+    def clear_can_bus_timeout(self):
+        """
+        Clear CAN bus timeout fault on the battery ECU
+
+        Example:
+            | Clear CAN Bus Timeout |
+        """
+        if self._battery_ecu is None:
+            raise RuntimeError("Battery ECU not set")
+
+        self._battery_ecu.clear_can_timeout()
+        self._injected_faults = [
+            fault for fault in self._injected_faults if fault[0] != "can_bus_timeout"
+        ]
+        logger.info("Cleared CAN bus timeout fault")
+
+    @keyword
     def inject_can_frame_loss(self, can_id: int, loss_rate: float = 0.5):
         """
         Simulate CAN frame loss for specific message ID
@@ -343,6 +375,7 @@ class FaultInjectionLibrary:
             self._battery_ecu.set_cell_voltage(i, 3.7)
             self._battery_ecu.set_cell_temperature(i, 25.0)
 
+        self._battery_ecu.clear_can_timeout()
         self._battery_ecu.clear_dtc()
 
         # Clear tracked faults
@@ -356,6 +389,7 @@ class FaultInjectionLibrary:
                 "cell_overtemperature",
                 "cell_undertemperature",
                 "low_soc",
+                "can_bus_timeout",
             ]
         ]
 

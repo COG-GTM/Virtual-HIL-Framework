@@ -79,6 +79,21 @@ class ECUSimulatorLibrary:
         return "door_ecu"
 
     @keyword
+    def get_battery_ecu_instance(self):
+        """
+        Get the battery ECU simulation instance
+
+        Returns:
+            BatteryECU instance
+
+        Example:
+            | ${ecu}= | Get Battery ECU Instance |
+        """
+        if self._battery_ecu is None:
+            raise RuntimeError("Battery simulation not started")
+        return self._battery_ecu
+
+    @keyword
     def stop_all_simulations(self):
         """Stop all running ECU simulations
 

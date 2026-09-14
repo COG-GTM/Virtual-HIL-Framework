@@ -2,8 +2,10 @@
 
 import asyncio
 import logging
+import time
 from dataclasses import dataclass
 from typing import Dict, Optional
+
 import yaml
 
 logger = logging.getLogger(__name__)
@@ -52,6 +54,9 @@ class BatteryECU:
         self.state = BatteryPackState()
         self.running = False
         self.config = self._load_config(config_path)
+        self.last_can_rx_time: float = time.time()
+        self._can_timeout_injected: bool = False
+        self._can_rx_seen: bool = False
         self._initialize_cells()
 
     def _load_config(self, config_path: Optional[str]) -> dict:
@@ -64,6 +69,7 @@ class BatteryECU:
             "min_voltage": 2.8,
             "max_temperature": 60.0,
             "min_temperature": -20.0,
+            "can_timeout_ms": 500,
         }
 
         if config_path:
@@ -129,6 +135,30 @@ class BatteryECU:
     def get_pack_temperature(self) -> float:
         """Get average pack temperature"""
         return self.state.temperature
+
+    def receive_can_message(self, can_id: int, data: bytes):
+        """Register a received CAN frame (refreshes the bus-alive watchdog)"""
+        del can_id, data
+        self.last_can_rx_time = time.time()
+        self._can_rx_seen = True
+
+    def inject_can_timeout(self):
+        """Inject a CAN bus timeout fault"""
+        self._can_timeout_injected = True
+
+    def clear_can_timeout(self):
+        """Clear an injected CAN bus timeout fault"""
+        self._can_timeout_injected = False
+        self.last_can_rx_time = time.time()
+        self._can_rx_seen = False
+
+    def is_can_timeout_active(self) -> bool:
+        """Check whether the CAN bus timeout fault is active"""
+        return self._can_timeout_injected or (
+            self._can_rx_seen
+            and (time.time() - self.last_can_rx_time) * 1000
+            > self.config.get("can_timeout_ms", 500)
+        )
 
     def set_cell_voltage(self, cell_id: int, voltage: float):
         """Set voltage of specific cell (for testing/fault injection)"""
@@ -204,6 +234,9 @@ class BatteryECU:
         if self.state.soc < 10:
             faults.append("LOW_SOC")
 
+        if self.is_can_timeout_active():
+            faults.append("CAN_TIMEOUT")
+
         return faults
 
     def get_dtc(self) -> Optional[str]:
@@ -216,7 +249,7 @@ class BatteryECU:
     def clear_dtc(self):
         """Clear any stored DTCs (simulation only)"""
         # In real implementation, would clear stored fault codes
-        pass
+        self.clear_can_timeout()
 
     async def start(self):
         """Start the ECU simulation"""
@@ -240,6 +273,7 @@ class BatteryECU:
             "min_cell_temp": self.state.min_cell_temp,
             "max_cell_voltage": self.state.max_cell_voltage,
             "min_cell_voltage": self.state.min_cell_voltage,
+            "can_timeout": self.is_can_timeout_active(),
             "faults": self.check_faults(),
         }
 

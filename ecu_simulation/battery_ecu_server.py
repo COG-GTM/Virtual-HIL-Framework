@@ -81,6 +81,7 @@ class ECUStatusResponse(BaseModel):
     min_cell_temp: float = Field(..., description="Minimum cell temperature (C)")
     max_cell_voltage: float = Field(..., description="Maximum cell voltage (V)")
     min_cell_voltage: float = Field(..., description="Minimum cell voltage (V)")
+    can_timeout: bool = Field(..., description="CAN bus timeout fault status")
     faults: List[str] = Field(default_factory=list, description="Active fault codes")
     running: bool = Field(..., description="ECU running status")
 
@@ -425,6 +426,24 @@ async def clear_dtc() -> SuccessResponse:
     ecu.clear_dtc()
     logger.info("DTCs cleared")
     return SuccessResponse(message="DTCs cleared successfully")
+
+
+@app.post("/ecu/fault/can_timeout", response_model=SuccessResponse, tags=["Faults"])
+async def inject_can_timeout() -> SuccessResponse:
+    """Inject a CAN bus timeout fault."""
+    ecu = get_ecu()
+    ecu.inject_can_timeout()
+    logger.info("CAN bus timeout injected")
+    return SuccessResponse(message="CAN bus timeout injected successfully")
+
+
+@app.delete("/ecu/fault/can_timeout", response_model=SuccessResponse, tags=["Faults"])
+async def clear_can_timeout() -> SuccessResponse:
+    """Clear a CAN bus timeout fault."""
+    ecu = get_ecu()
+    ecu.clear_can_timeout()
+    logger.info("CAN bus timeout cleared")
+    return SuccessResponse(message="CAN bus timeout cleared successfully")
 
 
 # =============================================================================
