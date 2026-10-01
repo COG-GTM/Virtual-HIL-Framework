@@ -65,10 +65,10 @@ Balancing Reduces Max Spread
 
     Log    Max spread before balancing: ${spread_before}V
 
-    # Run multiple balancing cycles
-    FOR    ${i}    IN RANGE    ${5}
+    # Run multiple balancing cycles (each cycle closes 10% of the gap)
+    FOR    ${i}    IN RANGE    ${10}
         Balance Cells
-        Sleep    0.5s
+        Sleep    0.2s
     END
 
     @{voltages_after}=    Create List
@@ -170,5 +170,5 @@ Balancing Performance Test
 Start Battery Simulation
     [Documentation]    Initialize battery ECU simulation
     Log    Starting battery ECU simulation for cell balancing tests...
-    ${id}=    Start Battery Simulation    num_cells=${NUM_CELLS}
+    ${id}=    libraries.ECUSimulatorLibrary.Start Battery Simulation    num_cells=${NUM_CELLS}
     Set Suite Variable    ${BATTERY_ID}    ${id}

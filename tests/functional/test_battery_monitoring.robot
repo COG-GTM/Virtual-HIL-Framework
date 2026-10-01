@@ -68,6 +68,8 @@ Simulate Battery Charging
     [Documentation]    Verify SOC increases during charging simulation
     [Tags]    battery    charging
 
+    # Pack starts fully charged; discharge first so there is headroom
+    Simulate Charging    current=-50    duration=600
     ${initial_soc}=    Get Battery SOC
     Log    Initial SOC: ${initial_soc}%
 
@@ -173,6 +175,6 @@ Measure Response Time
 Start Battery Simulation
     [Documentation]    Initialize battery ECU simulation
     Log    Starting battery ECU simulation...
-    ${id}=    Start Battery Simulation    num_cells=${NUM_CELLS}
+    ${id}=    libraries.ECUSimulatorLibrary.Start Battery Simulation    num_cells=${NUM_CELLS}
     Set Suite Variable    ${BATTERY_ID}    ${id}
     Log    Battery simulation started: ${BATTERY_ID}

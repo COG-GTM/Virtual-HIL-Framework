@@ -102,6 +102,8 @@ TC005 Simulate Charging Via HTTP
     [Documentation]    Verify SOC increases during charging simulation
     [Tags]    http    charging
 
+    # Pack starts fully charged; discharge first so there is headroom
+    Simulate Charging    current=-50    duration=600
     ${initial_soc}=    Get Battery SOC
     Log    Initial SOC: ${initial_soc}%
 
@@ -188,8 +190,9 @@ TC008 Fault Injection - Overvoltage
 
     # Verify DTC is set
     ${dtc}=    Get DTC
-    Should Not Be None    ${dtc}    msg=DTC should be set when fault is active
+    Should Not Be Equal    ${dtc}    ${None}    msg=DTC should be set when fault is active
     Log    DTC: ${dtc}
+    [Teardown]    Set Cell Voltage    0    3.7
 
 
 TC009 Fault Injection - Overtemperature
@@ -208,7 +211,7 @@ TC009 Fault Injection - Overtemperature
     Log    Active faults: ${faults}
 
     Should Contain    ${faults}    OVERTEMPERATURE    msg=OVERTEMPERATURE fault not detected
-
+    [Teardown]    Set Cell Temperature    0    25
 
 TC010 Clear DTC Via HTTP
     [Documentation]    Test DTC clearing functionality
@@ -233,6 +236,7 @@ TC010 Clear DTC Via HTTP
     # Note: In this simulation, DTC clearing is just a notification
     # The fault may still be present until the condition is resolved
     Log    DTC cleared (simulation only - fault condition may still exist)
+    [Teardown]    Set Cell Voltage    0    3.7
 
 
 TC011 Fault Verification Keywords
