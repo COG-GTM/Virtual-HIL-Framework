@@ -56,7 +56,7 @@ async def main():
     await server.start()
     await can.start()
 
-    async def tx(label: str, req: bytes):
+    async def tx(label: str, req: bytes, expect_sid: int | None = None):
         say(f"  TX  {hx(req):<24} ; {label}", C)
         t0 = time.perf_counter()
         resp = await server.process_request(req)
@@ -65,53 +65,76 @@ async def main():
         raw = resp.data if resp.data[:1] == bytes([resp.sid]) else bytes([resp.sid]) + resp.data
         tag = f"{R}NRC 0x{resp.nrc:02X}" if resp.is_negative else f"{G}OK"
         say(f"  RX  {hx(raw):<24} ; {tag}{N} ({dt:.2f} ms)")
+        if resp.is_negative or (expect_sid is not None and raw[:1] != bytes([expect_sid])):
+            raise RuntimeError(f"unexpected UDS response to {label}: {hx(raw)}")
         return raw
 
-    say(f"{B}=== UDS Diagnostic Session — Virtual BMS ECU (ISO 14229 over virtual CAN) ==={N}")
+    say(
+        f"{B}=== UDS Diagnostic Session — Virtual BMS ECU (ISO 14229 request/response in-process; fault frame on virtual CAN) ==={N}"
+    )
     say()
     say("[1] Tester -> ECU: DiagnosticSessionControl / ReadDataByIdentifier", B)
-    await tx("0x10 03 extendedDiagnosticSession", bytes([0x10, 0x03]))
-    r = await tx("0x22 F19E softwareVersion", bytes([0x22, 0xF1, 0x9E]))
+    await tx("0x10 03 extendedDiagnosticSession", bytes([0x10, 0x03]), expect_sid=0x50)
+    r = await tx("0x22 F19E softwareVersion", bytes([0x22, 0xF1, 0x9E]), expect_sid=0x62)
     say(f"       softwareVersion = {r[3:].decode(errors='replace')!r}")
-    r = await tx("0x22 F198 supplier", bytes([0x22, 0xF1, 0x98]))
+    r = await tx("0x22 F198 supplier", bytes([0x22, 0xF1, 0x98]), expect_sid=0x62)
     say(f"       supplier        = {r[3:].decode(errors='replace')!r}")
     say()
 
     say("[2] Baseline: ReadDTCInformation (reportDTCByStatusMask 0xFF)", B)
-    r = await tx("0x19 02 FF", bytes([0x19, 0x02, 0xFF]))
+    r = await tx("0x19 02 FF", bytes([0x19, 0x02, 0xFF]), expect_sid=0x59)
     say(f"       stored DTCs: {decode_dtcs(r) or 'none'}", G)
     say()
 
     say("[3] Fault injection on running FastAPI Battery ECU: cell 0 -> 4.35 V (limit 4.20 V)", B)
-    requests.put(f"{ECU_URL}/ecu/cell/0/voltage", json={"voltage": 4.35}, timeout=5).raise_for_status()
+    requests.put(
+        f"{ECU_URL}/ecu/cell/0/voltage", json={"voltage": 4.35}, timeout=5
+    ).raise_for_status()
     faults = requests.get(f"{ECU_URL}/ecu/faults", timeout=5).json()
     say(f"       GET /ecu/faults -> faults={faults['faults']} dtc={faults['dtc']}", Y)
     for f in faults["faults"]:
         code = FAULT_TO_DTC.get(f, "P0A00")
-        server.store_dtc(code, status=0x09, snapshot={"cell": 0, "voltage": 4.35})  # testFailed|confirmed
+        server.store_dtc(
+            code, status=0x09, snapshot={"cell": 0, "voltage": 4.35}
+        )  # testFailed|confirmed
         await can.send(0x102, bytes([0x01, 0x00, 0x04, 0x35 & 0xFF, 0, 0, 0, 0]))
         say(f"       CAN 0x102 BMS_Fault frame sent; UDS DTC {code} stored (status 0x09)", Y)
     say()
 
     say("[4] ReadDTCInformation after fault", B)
-    r = await tx("0x19 02 FF", bytes([0x19, 0x02, 0xFF]))
-    say(f"       stored DTCs: {decode_dtcs(r)}", R)
+    r = await tx("0x19 02 FF", bytes([0x19, 0x02, 0xFF]), expect_sid=0x59)
+    after_fault = decode_dtcs(r)
+    say(f"       stored DTCs: {after_fault}", R)
     say()
 
     say("[5] Repair: cell 0 back to 3.70 V, then ClearDiagnosticInformation", B)
-    requests.put(f"{ECU_URL}/ecu/cell/0/voltage", json={"voltage": 3.70}, timeout=5).raise_for_status()
+    requests.put(
+        f"{ECU_URL}/ecu/cell/0/voltage", json={"voltage": 3.70}, timeout=5
+    ).raise_for_status()
     requests.post(f"{ECU_URL}/ecu/dtc/clear", timeout=5).raise_for_status()
-    await tx("0x14 FF FF FF clearDiagnosticInformation(all)", bytes([0x14, 0xFF, 0xFF, 0xFF]))
+    await tx(
+        "0x14 FF FF FF clearDiagnosticInformation(all)",
+        bytes([0x14, 0xFF, 0xFF, 0xFF]),
+        expect_sid=0x54,
+    )
     say()
 
     say("[6] ReadDTCInformation after clear", B)
-    r = await tx("0x19 02 FF", bytes([0x19, 0x02, 0xFF]))
+    r = await tx("0x19 02 FF", bytes([0x19, 0x02, 0xFF]), expect_sid=0x59)
     dtcs = decode_dtcs(r)
     say(f"       stored DTCs: {dtcs or 'none'}", G if not dtcs else R)
     say()
     stats = can.get_statistics()
-    say(f"CAN bus: {stats['tx_count']} frame(s) sent on {stats['channel']} @ {stats['bitrate']} bit/s")
-    verdict = "PASS" if not dtcs and faults["faults"] == ["OVERVOLTAGE"] else "FAIL"
+    say(
+        f"CAN bus: {stats['tx_count']} frame(s) sent on {stats['channel']} @ {stats['bitrate']} bit/s"
+    )
+    checks = [
+        faults["faults"] == ["OVERVOLTAGE"],
+        after_fault == ["P0A80 status=0x09"],
+        not dtcs,
+        stats["tx_count"] == 1,
+    ]
+    verdict = "PASS" if all(checks) else "FAIL"
     say(f"{B}UDS diagnostics check: {verdict}{N}", G if verdict == "PASS" else R)
 
     await can.stop()
@@ -148,8 +171,16 @@ def render_png(path: Path):
             color = "#e3b341"
         elif line.startswith("===") or line.startswith("[") or "PASS" in line:
             color = "#ffffff"
-        ax.text(0.01, 1 - (i + 0.5) / len(lines), line, family="monospace", fontsize=9,
-                color=color, transform=ax.transAxes, va="center")
+        ax.text(
+            0.01,
+            1 - (i + 0.5) / len(lines),
+            line,
+            family="monospace",
+            fontsize=9,
+            color=color,
+            transform=ax.transAxes,
+            va="center",
+        )
     fig.savefig(path, dpi=150, bbox_inches="tight", facecolor=fig.get_facecolor())
 
 

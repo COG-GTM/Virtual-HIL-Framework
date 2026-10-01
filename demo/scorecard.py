@@ -68,20 +68,48 @@ def main():
         rows.append(("UDS DTC read/clear session", int(uds_ok), int(not uds_ok), 0, 0.0))
         tp, tf = tp + int(uds_ok), tf + int(not uds_ok)
 
-    gate = "RELEASE GATE: PASS" if tf == 0 else "RELEASE GATE: BLOCKED"
-    gate_color = GREEN if tf == 0 else RED
+    # PASS requires zero failures, zero skipped and at least one executed Robot case
+    robot_passed = sum(
+        r[1] for r in rows if r[0] not in ("pytest unit tests", "UDS DTC read/clear session")
+    )
+    passed = tf == 0 and ts == 0 and robot_passed > 0 and uds_ok is not False
+    gate = "RELEASE GATE: PASS" if passed else "RELEASE GATE: BLOCKED"
+    gate_color = GREEN if passed else RED
 
     fig = plt.figure(figsize=(12, 1.8 + 0.8 * len(rows)), facecolor=BG)
     gs = fig.add_gridspec(2, 1, height_ratios=[1.0, len(rows)], hspace=0.05)
 
     hdr = fig.add_subplot(gs[0])
     hdr.axis("off")
-    hdr.text(0, 0.9, "Virtual HIL Framework — Stage 6 Release Gate", color=FG, fontsize=18,
-             fontweight="bold", va="top")
-    hdr.text(0, 0.35, f"{tp + tf + ts} checks   {tp} passed   {tf} failed   {ts} skipped   "
-             f"Robot wall time {tdur:.1f}s", color=FG, fontsize=12, va="top")
-    hdr.text(1.0, 0.25, gate, color="white", fontsize=15, fontweight="bold", ha="right", va="center",
-             bbox={"boxstyle": "round,pad=0.5", "facecolor": gate_color, "edgecolor": "none"})
+    hdr.text(
+        0,
+        0.9,
+        "Virtual HIL Framework — Stage 6 Release Gate",
+        color=FG,
+        fontsize=18,
+        fontweight="bold",
+        va="top",
+    )
+    hdr.text(
+        0,
+        0.35,
+        f"{tp + tf + ts} checks   {tp} passed   {tf} failed   {ts} skipped   "
+        f"Robot wall time {tdur:.1f}s",
+        color=FG,
+        fontsize=12,
+        va="top",
+    )
+    hdr.text(
+        1.0,
+        0.25,
+        gate,
+        color="white",
+        fontsize=15,
+        fontweight="bold",
+        ha="right",
+        va="center",
+        bbox={"boxstyle": "round,pad=0.5", "facecolor": gate_color, "edgecolor": "none"},
+    )
 
     ax = fig.add_subplot(gs[1])
     ax.set_facecolor(BG)

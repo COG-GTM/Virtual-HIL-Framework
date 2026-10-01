@@ -1,4 +1,4 @@
-=== UDS Diagnostic Session — Virtual BMS ECU (ISO 14229 over virtual CAN) ===
+=== UDS Diagnostic Session — Virtual BMS ECU (ISO 14229 request/response in-process; fault frame on virtual CAN) ===
 
 [1] Tester -> ECU: DiagnosticSessionControl / ReadDataByIdentifier
   TX  10 03                    ; 0x10 03 extendedDiagnosticSession

@@ -166,6 +166,8 @@ class ECUSimulatorLibrary:
         """
         if self._battery_ecu is None:
             raise RuntimeError("Battery ECU not started")
+        if int(cell_id) not in self._battery_ecu.cells:
+            raise ValueError(f"Unknown cell id {cell_id}")
         self._battery_ecu.set_cell_voltage(int(cell_id), float(voltage))
 
     @keyword
@@ -178,6 +180,8 @@ class ECUSimulatorLibrary:
         """
         if self._battery_ecu is None:
             raise RuntimeError("Battery ECU not started")
+        if int(cell_id) not in self._battery_ecu.cells:
+            raise ValueError(f"Unknown cell id {cell_id}")
         self._battery_ecu.set_cell_temperature(int(cell_id), float(temperature))
 
     @keyword
