@@ -33,7 +33,7 @@ jobs:
           exit 1
 
       - name: Run unit tests
-        run: uv run pytest tests/unit -v --junitxml=reports/pytest.xml
+        run: uv run --extra dev pytest tests/unit -v --junitxml=reports/pytest.xml
 
       - name: Run Robot Framework tests
         if: success() || failure()
