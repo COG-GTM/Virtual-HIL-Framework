@@ -339,7 +339,7 @@ class FaultInjectionLibrary:
             raise RuntimeError("Battery ECU not set")
 
         # Reset cell voltages to nominal
-        for i in range(96):
+        for i in list(self._battery_ecu.cells):
             self._battery_ecu.set_cell_voltage(i, 3.7)
             self._battery_ecu.set_cell_temperature(i, 25.0)
 
@@ -389,8 +389,10 @@ class FaultInjectionLibrary:
         Example:
             | Clear All Faults |
         """
-        self.clear_battery_faults()
-        self.clear_door_faults()
+        if self._battery_ecu is not None:
+            self.clear_battery_faults()
+        if self._door_ecu is not None:
+            self.clear_door_faults()
         self._injected_faults = []
         logger.info("Cleared all faults")
 

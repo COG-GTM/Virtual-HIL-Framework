@@ -8,7 +8,7 @@ Resource          ../../resources/ecu_variables.robot
 Library           libraries.ECUSimulatorLibrary
 Library           Collections
 
-Suite Setup       Start Battery Simulation
+Suite Setup       Setup Battery Suite
 Suite Teardown    Stop All Simulations
 Test Timeout      30 seconds
 
@@ -67,6 +67,9 @@ Verify Cell Voltage Spread
 Simulate Battery Charging
     [Documentation]    Verify SOC increases during charging simulation
     [Tags]    battery    charging
+
+    # Pack boots at 100% SOC; discharge first so charging has headroom
+    Simulate Charging    current=-50    duration=600
 
     ${initial_soc}=    Get Battery SOC
     Log    Initial SOC: ${initial_soc}%
@@ -170,7 +173,7 @@ Measure Response Time
 
 
 *** Keywords ***
-Start Battery Simulation
+Setup Battery Suite
     [Documentation]    Initialize battery ECU simulation
     Log    Starting battery ECU simulation...
     ${id}=    Start Battery Simulation    num_cells=${NUM_CELLS}

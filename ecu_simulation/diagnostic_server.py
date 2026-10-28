@@ -41,6 +41,7 @@ class NRC(Enum):
     SUB_FUNCTION_NOT_SUPPORTED = 0x12
     CONDITIONS_NOT_CORRECT = 0x22
     REQUEST_SEQUENCE_ERROR = 0x24
+    REQUEST_OUT_OF_RANGE = 0x31
     SECURITY_ACCESS_DENIED = 0x33
     INVALID_KEY = 0x35
     EXCEED_NUMBER_OF_ATTEMPTS = 0x36
@@ -214,7 +215,12 @@ class DiagnosticServer:
                 response_data.extend(bytes([did >> 8, did & 0xFF]))
                 response_data.extend(data)
             else:
-                return DiagnosticResponse(0x62, bytes([dids[0] >> 8, dids[0] & 0xFF]), False)
+                return DiagnosticResponse(
+                    0x7F,
+                    bytes([0x22, NRC.REQUEST_OUT_OF_RANGE.value]),
+                    True,
+                    NRC.REQUEST_OUT_OF_RANGE.value,
+                )
 
         return DiagnosticResponse(0x62, bytes(response_data))
 

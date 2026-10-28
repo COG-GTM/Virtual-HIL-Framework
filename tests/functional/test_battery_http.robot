@@ -102,6 +102,9 @@ TC005 Simulate Charging Via HTTP
     [Documentation]    Verify SOC increases during charging simulation
     [Tags]    http    charging
 
+    # Pack boots at 100% SOC; discharge first so charging has headroom
+    Simulate Charging    current=-50    duration=600
+
     ${initial_soc}=    Get Battery SOC
     Log    Initial SOC: ${initial_soc}%
 
@@ -172,6 +175,7 @@ TC007 Cell Balancing Via HTTP
 TC008 Fault Injection - Overvoltage
     [Documentation]    Test overvoltage fault detection via HTTP
     [Tags]    http    faults    overvoltage
+    [Teardown]    Restore Cell 0 To Nominal
 
     # Initially, no overvoltage fault should be present
     ECU Should Have No Faults
@@ -188,13 +192,14 @@ TC008 Fault Injection - Overvoltage
 
     # Verify DTC is set
     ${dtc}=    Get DTC
-    Should Not Be None    ${dtc}    msg=DTC should be set when fault is active
+    Should Not Be Equal    ${dtc}    ${None}    msg=DTC should be set when fault is active
     Log    DTC: ${dtc}
 
 
 TC009 Fault Injection - Overtemperature
     [Documentation]    Test overtemperature fault detection via HTTP
     [Tags]    http    faults    temperature
+    [Teardown]    Restore Cell 0 To Nominal
 
     # Clear any existing faults first
     Clear DTC
@@ -213,6 +218,7 @@ TC009 Fault Injection - Overtemperature
 TC010 Clear DTC Via HTTP
     [Documentation]    Test DTC clearing functionality
     [Tags]    http    faults    dtc
+    [Teardown]    Restore Cell 0 To Nominal
 
     # First, ensure we have a fault
     Set Cell Voltage    0    5.0
@@ -238,6 +244,7 @@ TC010 Clear DTC Via HTTP
 TC011 Fault Verification Keywords
     [Documentation]    Test fault verification helper keywords
     [Tags]    http    faults    verification
+    [Teardown]    Restore Cell 0 To Nominal
 
     # First, ensure no faults
     Clear DTC
@@ -250,9 +257,6 @@ TC011 Fault Verification Keywords
 
     # Should now have the fault
     ECU Should Have Fault    OVERVOLTAGE
-
-    # Clean up - restore normal voltage
-    Set Cell Voltage    0    3.7
 
 
 TC012 Cell Temperature Queries And Injection
@@ -360,3 +364,10 @@ Stop ECU Server
     Log    Disconnecting from ECU server
     Stop ECU
     Log    ECU server connection closed
+
+
+Restore Cell 0 To Nominal
+    [Documentation]    Undo cell 0 fault injection so faults don't leak into later tests
+    Set Cell Voltage    0    3.7
+    Set Cell Temperature    0    25
+    Clear DTC

@@ -8,7 +8,7 @@ Library           libraries.ECUSimulatorLibrary
 Library           libraries.FaultInjectionLibrary
 Library           Collections
 
-Suite Setup       Start Battery Simulation
+Suite Setup       Setup Battery Suite
 Suite Teardown    Clear All Faults And Stop
 Test Timeout      30 seconds
 
@@ -34,7 +34,7 @@ Detect Overtemperature Fault
     Log    Initial faults: ${initial_faults}
 
     # Inject overtemperature
-    Inject Cell Overtemperature    cell_id=0    temperature=${MAX_OPERATING_TEMP + 10}
+    Inject Cell Overtemperature    cell_id=0    temperature=${MAX_CELL_TEMP + 10}
 
     ${detected}=    Verify Battery Fault Detected    fault_name=OVERTEMPERATURE    timeout=2
 
@@ -49,7 +49,7 @@ Detect Undertemperature Fault
     [Tags]    battery    thermal    fault
 
     # Inject undertemperature
-    Inject Cell Undertemperature    cell_id=0    temperature=${MIN_OPERATING_TEMP - 10}
+    Inject Cell Undertemperature    cell_id=0    temperature=${MIN_CELL_TEMP - 10}
 
     ${detected}=    Verify Battery Fault Detected    fault_name=UNDERTEMPERATURE    timeout=2
 
@@ -134,7 +134,7 @@ Multiple Thermal Faults Detection
     Should Contain    ${faults}    OVERTEMPERATURE
 
     # Count how many cells are over temperature
-    ${overtemp_count}=    Set Variable    0
+    ${overtemp_count}=    Set Variable    ${0}
     FOR    ${cell_id}    IN RANGE    ${NUM_CELLS}
         ${temp}=    Get Cell Temperature    ${cell_id}
         ${is_over}=    Evaluate    ${temp} > ${MAX_CELL_TEMP}
@@ -188,7 +188,7 @@ Temperature Monitoring Precision
 
 
 *** Keywords ***
-Start Battery Simulation
+Setup Battery Suite
     [Documentation]    Initialize battery ECU simulation and fault injection
     Log    Starting battery ECU simulation for thermal tests...
     ${id}=    Start Battery Simulation    num_cells=${NUM_CELLS}
@@ -204,24 +204,3 @@ Clear All Faults And Stop
     Clear All Faults
     Stop All Simulations
     Log    Battery simulation stopped and faults cleared
-
-Get Battery Faults
-    [Documentation]    Helper to get current battery faults
-    [Arguments]    ${timeout}=0.5
-    # This would need to be implemented in ECUSimulatorLibrary
-    # For now, return empty list
-    @{empty}=    Create List
-    Return    ${empty}
-
-Get Battery ECU Instance
-    [Documentation]    Get the battery ECU instance for fault injection
-    # In real implementation, this would return the actual ECU instance
-    # For simulation, return mock object
-    ${battery}=    Evaluate    None
-    Return    ${battery}
-
-Set Cell Temperature
-    [Documentation]    Set a specific cell temperature (for fault injection)
-    [Arguments]    ${cell_id}    ${temperature}
-    # This would be implemented using FaultInjectionLibrary
-    Log    Setting cell ${cell_id} temperature to ${temperature}C
