@@ -22,10 +22,10 @@ ${MAX_PACK_VOLTAGE}      403.2  # V
 ${MIN_PACK_VOLTAGE}      268.8  # V
 
 # Temperature limits (Celsius)
-${MAX_CELL_TEMP}         60.0
-${MIN_CELL_TEMP}         -20.0
-${MAX_OPERATING_TEMP}    45.0
-${MIN_OPERATING_TEMP}    -10.0
+${MAX_CELL_TEMP}         ${60.0}
+${MIN_CELL_TEMP}         ${-20.0}
+${MAX_OPERATING_TEMP}    ${45.0}
+${MIN_OPERATING_TEMP}    ${-10.0}
 
 # SOC limits
 ${MAX_SOC}               100.0  # %

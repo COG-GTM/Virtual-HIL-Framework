@@ -157,6 +157,36 @@ class ECUSimulatorLibrary:
         return self._battery_ecu.get_cell_voltage(cell_id)
 
     @keyword
+    def get_cell_temperature(self, cell_id: int) -> float:
+        """Get temperature of a specific battery cell in Celsius"""
+        return self._require_battery().get_cell_temperature(int(cell_id))
+
+    @keyword
+    def set_cell_voltage(self, cell_id: int, voltage: float):
+        """Set voltage of a specific battery cell (stimulus / fault injection)"""
+        self._require_battery().set_cell_voltage(int(cell_id), float(voltage))
+
+    @keyword
+    def set_cell_temperature(self, cell_id: int, temperature: float):
+        """Set temperature of a specific battery cell (stimulus / fault injection)"""
+        self._require_battery().set_cell_temperature(int(cell_id), float(temperature))
+
+    @keyword
+    def get_battery_faults(self) -> list:
+        """Return the list of currently active battery fault names"""
+        return self._require_battery().check_faults()
+
+    @keyword
+    def get_battery_ecu_instance(self):
+        """Return the live BatteryECU object (e.g. for FaultInjectionLibrary.Set Battery ECU)"""
+        return self._require_battery()
+
+    def _require_battery(self):
+        if self._battery_ecu is None:
+            raise RuntimeError("Battery ECU not started")
+        return self._battery_ecu
+
+    @keyword
     def simulate_charging(self, current: float, duration: float):
         """
         Simulate battery charging or discharging

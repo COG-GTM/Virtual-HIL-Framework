@@ -335,7 +335,6 @@ def main():
     # Fix Windows console encoding
     if platform.system() == "Windows":
         import io
-        import sys
 
         # Set UTF-8 mode for Windows console
         sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace")

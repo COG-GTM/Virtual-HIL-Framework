@@ -7,7 +7,7 @@ Resource          ../../resources/ecu_variables.robot
 Library           libraries.ECUSimulatorLibrary
 Library           Collections
 
-Suite Setup       Start Battery Simulation
+Suite Setup       Setup Battery Suite
 Suite Teardown    Stop All Simulations
 Test Timeout      30 seconds
 
@@ -65,8 +65,8 @@ Balancing Reduces Max Spread
 
     Log    Max spread before balancing: ${spread_before}V
 
-    # Run multiple balancing cycles
-    FOR    ${i}    IN RANGE    ${5}
+    # Each cycle closes 10% of the gap to the pack average: 10 cycles -> ~35% of original spread
+    FOR    ${i}    IN RANGE    ${10}
         Balance Cells
         Sleep    0.5s
     END
@@ -167,7 +167,7 @@ Balancing Performance Test
 
 
 *** Keywords ***
-Start Battery Simulation
+Setup Battery Suite
     [Documentation]    Initialize battery ECU simulation
     Log    Starting battery ECU simulation for cell balancing tests...
     ${id}=    Start Battery Simulation    num_cells=${NUM_CELLS}
